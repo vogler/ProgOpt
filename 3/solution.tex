@@ -1,0 +1,206 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+%\usepackage[ngerman]{babel}
+\usepackage[ngerman,english]{babel}
+\selectlanguage{english}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+%% http://stackoverflow.com/questions/741985/latex-source-code-listing-like-in-professional-books
+\usepackage{courier}
+\definecolor{light-gray}{gray}{0.95}
+\lstset{
+  % language=C,
+  basicstyle=\small\sffamily,
+%   basicstyle=\small\ttfamily,
+  numbers=left,
+  numberstyle=\tiny,
+  frame=tb,
+%  columns=fullflexible,
+%  showstringspaces=false,
+	backgroundcolor=\color{light-gray},
+	linewidth=\linewidth,       % Zeilenbreite
+	breaklines=true,             % Zeileumbruch
+	breakatwhitespace=false, %Umbruch an Leerzeichen
+  tabsize=2,
+  extendedchars=true,
+  xleftmargin=17pt,
+  framexleftmargin=17pt,
+  abovecaptionskip=7pt,
+%   frameround=tttt,
+}
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 3}
+
+\maketitle
+
+\section*{Exercise 1: Solving}
+\begin{minipage}{0.4\textwidth}
+\begin{align*}
+&\mathcal{A}[0] \subseteq \emptyset\\
+&\mathcal{A}[1] \subseteq (\mathcal{A}[0] \cup \{1,2\}) \backslash \{4,5\}\\
+&\mathcal{A}[1] \subseteq (\mathcal{A}[4] \cup \{1,3\}) \backslash \{5\}\\
+&\mathcal{A}[2] \subseteq \mathcal{A}[1] \backslash \{1,3\}\\
+&\mathcal{A}[3] \subseteq (\mathcal{A}[2] \cup \{4,5\}) \backslash \{2,5\}\\
+&\mathcal{A}[4] \subseteq (\mathcal{A}[3] \cup \{1\}) \backslash \{2,3\}\\
+\end{align*}
+\end{minipage}
+\begin{table}[h]
+\begin{minipage}{0.4\textwidth}
+\begin{tabular}{c|c|c|c|c}
+$\mathcal{A}[i]$ & 0 & 1 & 2 & 3 \\ \hline
+$\mathcal{A}[0]$ & $\emptyset$ & $\emptyset$ & $\emptyset$ & dito \\
+$\mathcal{A}[1]$ & $\emptyset$ & $\{1\}$ & $\{1\}$ \\
+$\mathcal{A}[2]$ & $\emptyset$ & $\emptyset$ & $\emptyset$ \\
+$\mathcal{A}[3]$ & $\emptyset$ & $\{4\}$ & $\{4\}$ \\
+$\mathcal{A}[4]$ & $\emptyset$ & $\{1\}$ & $\{1,4\}$ \\
+\end{tabular}
+\caption{Naive iteration}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+\begin{tabular}{c|c|c|c}
+$\mathcal{A}[i]$ & 0 & 1 & 2 \\ \hline
+$\mathcal{A}[0]$ & $\emptyset$ & $\emptyset$ & dito \\
+$\mathcal{A}[1]$ & $\emptyset$ & $\{1\}$ \\
+$\mathcal{A}[2]$ & $\emptyset$ & $\emptyset$ \\
+$\mathcal{A}[3]$ & $\emptyset$ & $\{4\}$ \\
+$\mathcal{A}[4]$ & $\emptyset$ & $\{1,4\}$ \\
+\end{tabular}
+\caption{RR iteration}
+\end{minipage}
+\end{table}
+
+\section*{Exercise 2: RR is Correct!}
+\begin{enumerate}
+\item \begin{align}
+&y_i^{(d)} \sqsubseteq x_i^{(d)}\\
+\rightarrow &F^d \perp \sqsubseteq RR^d \perp\\
+\rightarrow \text{induction on $d$:}\\
+\text{Foundation $(d = 0)$}&: \hspace{1cm} y_i^{(0)} = F^0 \perp = \perp \sqsubseteq  RR^0 \perp = x_i^{(0)}\\
+\text{Step $(d+1)$ using (2)}&: \hspace{1cm} F^{d+1} \perp = F(F^d \perp) \sqsubseteq F(RR^d \perp) \sqsubseteq  RR(RR^d \perp) = RR^{d+1} \perp
+\end{align}
+\item \begin{align*}
+x_i^{(d)} \sqsubseteq z_i^{(d)} \text{ for every solution } (z_1,...,z_n)
+\end{align*}
+holds because $x_i^{(d)}$ will be the least solution among all solutions $z$ that satisfy $z = F(z)$ (slides 107ff). This is the case because $y_i^{(d)} \sqsubseteq z_i^{(d)}$ and $y_i^{(d)} \sqsubseteq x_i^{(d)}$, which means that RR iteration will reach the same (least) solution as naive iteration, only faster.
+\end{enumerate}
+
+
+\section*{Exercise 3: Merge/Meet Over all Paths}
+\begin{minipage}{0.35\textwidth}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below right of=1](2) {1};
+  \node[main node] [below of=2](3) {2};
+  \node[main node] [below of=3](4) {3};
+  \node[main node] [below left of=1](5) {4};
+  \node[main node] [below of=5](6) {5};
+  \node[main node] [below of=6](7) {6};
+  \node[main node] [below right of=7](8) {7};
+  \node[main node] [below of=8](9) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {Pos(x)} (2)
+    (2) edge node [right] {x = 1;} (3)
+    (3) edge node [right] {y = 2;} (4)
+    (1) edge node [left] {Neg(x)} (5)
+    (5) edge node [right] {y = 1;} (6)
+    (6) edge node [right] {x = 2;} (7)
+    (7) edge node [left] {;} (8)
+    (4) edge node [right] {;} (8)
+    (8) edge node [right] {x = x * y} (9);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}{0.65\textwidth}
+\begin{align*}
+\mathcal{I}^*[0] &= d_0 = (\mathbb{N}, \mathbb{N})\\
+\mathcal{I}^*[1] &= [\![Pos(x)]\!]^\# d_0 = (\mathbb{N}, \mathbb{N})\\
+\mathcal{I}^*[2] &= (\{1\}, \mathbb{N})\\
+\mathcal{I}^*[3] &= (\{1\}, \{2\})\\
+\mathcal{I}^*[4] &= [\![ Neg(x)]\!]^\# d_0 = (\mathbb{N}, \mathbb{N})\\
+\mathcal{I}^*[5] &= (\mathbb{N}, \{1\})\\
+\mathcal{I}^*[6] &= (\{2\}, \{1\})\\
+\mathcal{I}^*[7] &= \bigsqcup \{(\{1\}, \{2\}), (\{2\}, \{1\})\} = (\{1,2\}, \{1,2\})\\
+\mathcal{I}^*[f] &= (\{1*1, 1*2, 2*1, 2*2\}, \{1,2\}) = (\{1, 2, 4\}, \{1,2\})\\
+\end{align*}
+\end{minipage}\\ \\
+
+
+\section*{Exercise 4: Live variables}
+\begin{minipage}{0.3\textwidth}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1](2) {1};
+  \node[main node] [below of=2](3) {2};
+  \node[main node] [below of=3](4) {3};
+  \node[main node] [below of=4](5) {4};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {x = y+4;} (2)
+    (2) edge node [right] {y = 2;} (3)
+    (3) edge node [right] {x = y+7;} (4)
+    (4) edge node [right] {M[y] = x;} (5);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}{0.4\textwidth}
+Constraints:
+\begin{align*}
+\mathcal{L}[0] &\supseteq (\mathcal{L}[1] \backslash \{x\}) \cup \{y\}\\
+\mathcal{L}[1] &\supseteq \mathcal{L}[2] \backslash \{y\}\\
+\mathcal{L}[2] &\supseteq (\mathcal{L}[3] \backslash \{x\}) \cup \{y\}\\
+\mathcal{L}[3] &\supseteq \mathcal{L}[4] \cup \{y, x\}\\
+\mathcal{L}[4] &\supseteq \emptyset \\
+\end{align*}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+Solution:
+\begin{align*}
+\mathcal{L}[0] &= \{y\} \\
+\mathcal{L}[1] &= \emptyset \\
+\mathcal{L}[2] &= \{y\} \\
+\mathcal{L}[3] &= \{x, y\} \\
+\mathcal{L}[4] &= \emptyset \\
+\end{align*}
+\end{minipage}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,140 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+%% http://stackoverflow.com/questions/741985/latex-source-code-listing-like-in-professional-books
+\usepackage{courier}
+\definecolor{light-gray}{gray}{0.95}
+\lstset{
+  % language=C,
+  basicstyle=\small\sffamily,
+%   basicstyle=\small\ttfamily,
+  numbers=left,
+  numberstyle=\tiny,
+  frame=tb,
+%  columns=fullflexible,
+%  showstringspaces=false,
+	backgroundcolor=\color{light-gray},
+	linewidth=\linewidth,       % Zeilenbreite
+	breaklines=true,             % Zeileumbruch
+	breakatwhitespace=false, %Umbruch an Leerzeichen
+  tabsize=2,
+  extendedchars=true,
+  xleftmargin=17pt,
+  framexleftmargin=17pt,
+  abovecaptionskip=7pt,
+%   frameround=tttt,
+}
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 1}
+
+\maketitle
+
+\section*{Exercise 1: The language, CFGs, and transformations}
+\subsection*{a) Translate the program to our simplified imperative language.}
+\begin{lstlisting}
+r = 0;							// int r = 0;
+i = 0;							// int i = 0;
+A: if(i < n){				// for-loop condition
+	A_1 = A_0 + 1*i;	// A_0 == &a and assuming element size 1
+	r = r + M[A_1];		// r += a[i];
+	i = i + 1;				// i++
+	goto A;						// continue
+} else { }
+R_0 = r;						// return r;
+	
+\end{lstlisting}
+
+
+\subsection*{b) Draw the corresponding Control Flow Graph.}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.5cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1](2) {1};
+  \node[main node] [below of=2](3) {2};
+  \node[main node] [below left of=3](4) {f};
+  \node[main node] [below right of=3](5) {3};
+  \node[main node] [below of=5](6) {4};
+  \node[main node] [below of=6](7) {5};
+  \node[main node] [below of=7](8) {6};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {r = 0;} (2)
+    (2) edge node [right] {i = 0;} (3)
+    (3) edge node [left] {Neg(i < n)} (4)
+    (5) edge node [right] {$A_1$ = $A_0$ + 1*i;} (6)
+    (6) edge node [right] {r = r + M[$A_1$];} (7)
+    (7) edge node [right] {i = i + 1;} (8)
+    (8) edge [bend left] node {goto A;} (3)
+    (3) edge node [right] {Pos(i < n)} (5);
+\end{tikzpicture}
+
+
+\subsection*{c) Write down the path ($\pi = ...$) that represents the whole function call with n = 1.}
+$\pi = r = 0;
+\\i = 0;
+\\Pos(i < n);
+\\A_1 = A_0 + 1*i;
+\\r = r + M[A_1];
+\\i = i+1;
+\\goto\;A;
+\\Neg(i < n);$
+
+\subsection*{d) Perform the transformation 1.1 to all non-trivial assignments in your graph.
+All assignments of just one constant or one variable are, in this exercise, considered
+trivial.}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.5cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1](2) {1};
+  \node[main node] [below of=2](9) {2a};
+  \node[main node] [below of=9](3) {2b};
+  \node[main node] [below left of=3](4) {f};
+  \node[main node] [below right of=3](5) {3a};
+  \node[main node] [below of=5](10) {3b};
+  \node[main node] [below of=10](6) {4};
+  \node[main node] [below of=6](7) {5};
+  \node[main node] [below of=7](8) {6};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {r = 0;} (2)
+    (2) edge node [right] {i = 0;} (9)
+    (9) edge node [right] {$T_{i < n}$ = i < n;} (3)
+    (3) edge node [left] {Neg($T_{i < n}$)} (4)
+    (5) edge node [right] {$T_{A_0 + i;}$ = $A_0$ + i;} (10)
+    (10) edge node [right] {$A_1$ = $T_{A_0 + i;}$} (6)
+    (6) edge node [right] {r = r + M[$A_1$];} (7)
+    (7) edge node [right] {i = i + 1;} (8)
+    (8) edge [bend left] node {goto A;} (9)
+    (3) edge node [right] {Pos($T_{i < n}$)} (5);
+\end{tikzpicture}\\
+The transformation isn't done for $i = i + 1$ and $r = r + M[A_1];$ because $x \in Vars(e)$ (cf. slide 56). Here the transformation doesn't result in any Nop-steps because the expressions in the loop depend on $i$ which changes and therefore removes them from the set of available expressions.
+
+\section*{Exercise 2: Transformations}
+$\rho = \{x \mapsto \mu(2), y \mapsto 0, z \mapsto 0\}$\\
+$\mu = \{2 \mapsto 42\}$
+
+\end{document}

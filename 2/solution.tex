@@ -1,0 +1,247 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+%% http://stackoverflow.com/questions/741985/latex-source-code-listing-like-in-professional-books
+\usepackage{courier}
+\definecolor{light-gray}{gray}{0.95}
+\lstset{
+  % language=C,
+  basicstyle=\small\sffamily,
+%   basicstyle=\small\ttfamily,
+  numbers=left,
+  numberstyle=\tiny,
+  frame=tb,
+%  columns=fullflexible,
+%  showstringspaces=false,
+	backgroundcolor=\color{light-gray},
+	linewidth=\linewidth,       % Zeilenbreite
+	breaklines=true,             % Zeileumbruch
+	breakatwhitespace=false, %Umbruch an Leerzeichen
+  tabsize=2,
+  extendedchars=true,
+  xleftmargin=17pt,
+  framexleftmargin=17pt,
+  abovecaptionskip=7pt,
+%   frameround=tttt,
+}
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 2}
+
+\maketitle
+
+\section*{Exercise 1: The language, CFGs, and semantics}
+\subsection*{a) Draw the corresponding Control Flow Graph.}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.5cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1](2) {1};
+  \node[main node] [below of=2](3) {2};
+  \node[main node] [below of=3](4) {3};
+  \node[main node] [below left of=4](5) {f};
+  \node[main node] [below right of=4](6) {4};
+  \node[main node] [below of=6](7) {5};
+  \node[main node] [below of=7](8) {6};
+  \node[main node] [below of=8](9) {7};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {c = 20;} (2)
+    (2) edge node [right] {a = 2*c + 10;} (3)
+    (3) edge node [right] {i = 0;} (4)
+    (4) edge node [left] {Neg(i < n)} (5)
+    (4) edge node [right] {Pos(i < n)} (6)
+    (6) edge node [right] {b = 2*c + 10;} (7)
+    (7) edge node [right] {a = a + b / c + 42;} (8)
+    (8) edge node [right] {i = i+1;} (9)
+    (9) edge [bend left] node {goto A;} (4);
+\end{tikzpicture}
+
+\subsection*{b) Write down the constraint system for calculating available expressions, give the set
+of available expressions for each graph node.}
+
+\begin{align*}
+Constraints..C, Solution..S:\\
+C
+\left\{ \begin{array}{l}
+\mathcal{A}[0] \subseteq \emptyset\\
+\mathcal{A}[1] \subseteq (\mathcal{A}[0] \cup \{20\}) \backslash Expr_c\\
+\mathcal{A}[2] \subseteq (\mathcal{A}[1] \cup \{2*c+10\}) \backslash Expr_a\\
+\mathcal{A}[3] \subseteq (\mathcal{A}[2] \cup \{0\}) \backslash Expr_i\\
+\mathcal{A}[3] \subseteq \mathcal{A}[7]\\
+\mathcal{A}[4] \subseteq (\mathcal{A}[3] \cup \{i<n\})\\
+\mathcal{A}[5] \subseteq (\mathcal{A}[4] \cup \{2*c+10\}) \backslash Expr_b\\
+\mathcal{A}[6] \subseteq (\mathcal{A}[5] \cup \{a+b/c+42\}) \backslash Expr_a\\
+\mathcal{A}[7] \subseteq (\mathcal{A}[6] \cup \{i+1\}) \backslash Expr_i\\
+\mathcal{A}[f] \subseteq (\mathcal{A}[3] \cup \{i<n\})
+\end{array}\right.
+S
+\left\{ \begin{array}{l}
+\mathcal{A}[0] = \emptyset\\
+\mathcal{A}[1] = \{20\}\\
+\mathcal{A}[2] = \{20, 2*c+10\}\\
+\mathcal{A}[3] = \{20, 2*c+10, 0\}\\
+\mathcal{A}[4] = \{20, 2*c+10, 0, i<n\}\\
+\mathcal{A}[5] = \{20, 2*c+10, 0, i<n\}\\
+\mathcal{A}[6] = \{20, 2*c+10, 0, i<n\}\\
+\mathcal{A}[7] = \{20, 2*c+10, 0\}\\
+\mathcal{A}[f] = \{20, 2*c+10, 0, i<n\}
+\end{array}\right.
+%\left\{ \begin{array}{rcl} a \\ b \end{array}\right.
+\end{align*}
+
+
+\subsection*{c) Perform the transformation 1.1 and 1.2 to all non-trivial assignments in your graph.}
+In the graph below only the important part has been changed (alternative to Tikz?).\\
+Transformation 1.1 introduces storage registers $T_e$ for all non-trivial expressions $e$.\\
+Transformation 1.2 replaces $e$ by $;$ (Nop) if $e$ is an available expression at node $u$.
+If one looks at the set of available expressions for each node, this only affects the calculation of $2*c+10$ from node 4 to 5. So the edge $T_{2*c + 10} = 2*c + 10;$ can be replaced by $;$.
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.5cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1](2) {1};
+  \node[main node] [below of=2](3) {2};
+  \node[main node] [below of=3](4) {3};
+  \node[main node] [below left of=4](5) {f};
+  \node[main node] [below right of=4](6) {4};
+  \node[main node] [below of=6](7) {5};
+  \node[main node] [below of=7](8) {6};
+  \node[main node] [below of=8](9) {7};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {c = 20;} (2)
+    (2) edge node [right] {a = 2*c + 10;} (3)
+    (3) edge node [right] {i = 0;} (4)
+    (4) edge node [left] {Neg(i < n)} (5)
+    (4) edge node [right] {Pos(i < n)} (6)
+    (6) edge node [right] {; b = $T_{2*c + 10}$;} (7)
+    (7) edge node [right] {a = a + b / c + 42;} (8)
+    (8) edge node [right] {i = i+1;} (9)
+    (9) edge [bend left] node {goto A;} (4);
+\end{tikzpicture}
+
+
+\subsection*{d) Count the number of operations performed for n = 4, for the initial and the transformed case. One operation is a binary operation, an assignment to a variable, or an comparison. The statement x = y+1 counts as two operations.}
+The transformed version doesn't have to reevaluate $T_{2*c + 10}$ and therefore saves $4*2$ operations.
+If the unneccessary assignments to $b$ are also removed, it will save $1*2+3*3$ operations.
+\begin{align*}
+N_{initial} &= 5+4*(1+3+6)+1 = 46\\
+N_{transformed} &= 5+4*(1+1+6)+1 = 38\\
+N_{transformed_{improved}} &= 5+1+4*(1+0+6)+1 = 35
+\end{align*}
+
+
+\section*{Exercise 2: Constraint systems}
+It is not a solution because it doesn't meet all the constraints:
+\begin{align*}
+&\mathcal{A}[0] = \emptyset \subseteq \emptyset \rightarrow ok\\
+&\mathcal{A}[1] = \{1,2,3\} \subseteq (\emptyset \cup \{1,2\}) \backslash \{4,5\} &\rightarrow \mbox{fail because } \{1,2,3\} \nsubseteq \{1,2\}\\
+\end{align*}
+$\mathcal{A}[1]$ should be $\{1\}$ because $\mathcal{A}[1] \subseteq \{1,2\} \cap \{1,3\}$.
+
+\section*{Exercise 3: Least fixpoint}
+The least fixpoint for $f$ is 100 because $f(100) = min(101,100) = 100$. It must be the least fixpoint because it is the only fixpoint.
+\begin{align*}
+f(x) = \left\{ \begin{array}{lcl}
+x+1, &\mbox{if } x<100 &\rightarrow f(x) \neq x\\
+100, &\mbox{otherwise} &\rightarrow f(x) = x \mbox{ iff } x = 100
+\end{array}\right.
+\end{align*}
+
+
+\section*{Exercise 4: Monotonicity}
+\begin{align*}
+&\textbf{dec }a \leq \textbf{dec }b\\
+\Leftarrow &\text{ \{apply the definition of dec\}}\\
+&a-1 \leq b-1\\
+\Leftarrow &\text{ \{move the ''-1'' to the right\}}\\
+&a \leq b-1+1\\
+\Leftarrow &\text{ \{simplify\}}\\
+&a \leq b
+\end{align*}
+
+\begin{align*}
+&\textbf{three }a \leq \textbf{three }b\\
+\Leftarrow &\text{ \{apply the definition of three\}}\\
+&3 \leq 3\\
+\Leftarrow &\text{ \{simplify\}}\\
+&true\\
+\Leftarrow &a \leq b \Rightarrow true \Leftrightarrow true\\
+&a \leq b
+\end{align*}
+
+\begin{align*}
+&\textbf{f }a \leq \textbf{f }b\\
+\Leftarrow &\text{ Part 1: \{f(x) = 0 is monotonic for x < 4\}}\\
+&0 \leq 0\\
+\Leftarrow &\text{ Part 2: \{show that $x^2$ is monotonic for x $\geq$ 4\}}\\
+&a^2 \leq b^2\\
+\Leftarrow &\text{ \{$b = a+x$ with $x \geq 0$\}}\\
+&a^2 \leq (a+x)^2\\
+\Leftarrow &\text{ \{simplify\}}\\
+&a^2 \leq a^2+2*a*x+x^2\\
+\Leftarrow &\text{ \{simplify\}}\\
+&0 \leq 2*a*x+x^2\\
+\Leftarrow &\text{ \{simplify\}}\\
+&a \leq b
+\end{align*}
+
+
+\begin{align*}
+&\textbf{inv }a \leq \textbf{inv }b\\
+\Leftarrow &\text{ \{apply the definition of inv\}}\\
+&-a \leq -b\\
+\Leftarrow &\text{ \{multiply with ''-1''\}}\\
+&a > b
+\end{align*}
+
+\begin{align*}
+&a \leq b\\
+\Rightarrow &\text{ \{let $a=3$ and $b=4$\}}\\
+&\textbf{g }3 \leq \textbf{g }4\\
+\Rightarrow &\text{ \{apply the definition of g\}}\\
+&40 \nleq 4^2\\
+\Rightarrow &\text{ \{fails\}}\\
+&\textbf{g }a \nleq \textbf{g }b
+\end{align*}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
