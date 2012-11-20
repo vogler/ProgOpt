@@ -1,0 +1,278 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+%\usepackage[ngerman]{babel}
+\usepackage[ngerman,english]{babel}
+\selectlanguage{english}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 4}
+
+\maketitle
+
+\section*{Exercise 1: Dead assignment elimination \& true liveness}
+\begin{minipage}[t]{0.5\textwidth}
+\vspace{0pt}
+\subsection*{1. Draw CFG}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3};
+  \node[main node] [below left of=4](5) {4};
+  \node[main node] [below right of=4](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=8] (9) {8};
+  \node[main node] [below of=9] (10) {9};
+  \node[main node] [below of=5] (11) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {i = 100;} (2)
+    (2) edge node [right] {s = 0;} (3)
+    (3) edge node [right] {t = 0;} (4)
+    (4) edge node [left] {Neg(i*i)} (5)
+    (4) edge node [right] {Pos(i*i)} (6)
+    (6) edge node [right] {q = i*i;} (7)
+    (7) edge node [right] {s = s+q;} (8)
+    (8) edge node [right] {w = i*i;} (9)
+    (9) edge node [right] {t = t-w;} (10)
+    (10) edge [bend left] node {i = i-1;} (4)
+    (5) edge node [left] {M[0] = s;} (11);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\vspace{0pt}
+\subsection*{2. Remove unnecessary repeated expr}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3a};
+  \node[main node] [below of=4] (12) {3b};
+  \node[main node] [below left of=12](5) {4};
+  \node[main node] [below right of=12](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=8] (9) {8};
+  \node[main node] [below of=9] (10) {9};
+  \node[main node] [below of=5] (11) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {i = 100;} (2)
+    (2) edge node [right] {s = 0;} (3)
+    (3) edge node [right] {t = 0;} (4)
+    (4) edge node [right] {$T_{i*i}$ = i*i;} (12)
+    (12) edge node [left] {Neg($T_{i*i}$)} (5)
+    (12) edge node [right] {Pos($T_{i*i}$)} (6)
+    (6) edge node [right] {q = $T_{i*i}$;} (7)
+    (7) edge node [right] {s = s+q;} (8)
+    (8) edge node [right] {w = $T_{i*i}$;} (9)
+    (9) edge node [right] {t = t-w;} (10)
+    (10) edge [bend left] node {i = i-1;} (4)
+    (5) edge node [left] {M[0] = s;} (11);
+\end{tikzpicture}
+\end{minipage}
+
+
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{3. Remove superfluous moves}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3a};
+  \node[main node] [below of=4] (12) {3b};
+  \node[main node] [below left of=12](5) {4};
+  \node[main node] [below right of=12](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=8] (9) {8};
+  \node[main node] [below of=9] (10) {9};
+  \node[main node] [below of=5] (11) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {i = 100;} (2)
+    (2) edge node [right] {s = 0;} (3)
+    (3) edge node [right] {t = 0;} (4)
+    (4) edge node [right] {$T_{i*i}$ = i*i;} (12)
+    (12) edge node [left] {Neg($T_{i*i}$)} (5)
+    (12) edge node [right] {Pos($T_{i*i}$)} (6)
+    (6) edge node [right] {;} (7)
+    (7) edge node [right] {s = s+$T_{i*i}$;} (8)
+    (8) edge node [right] {;} (9)
+    (9) edge node [right] {t = t-$T_{i*i}$;} (10)
+    (10) edge [bend left] node {i = i-1;} (4)
+    (5) edge node [left] {M[0] = s;} (11);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{4. Remove dead assignments}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3a};
+  \node[main node] [below of=4] (12) {3b};
+  \node[main node] [below left of=12](5) {4};
+  \node[main node] [below right of=12](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=8] (9) {8};
+  \node[main node] [below of=9] (10) {9};
+  \node[main node] [below of=5] (11) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {i = 100;} (2)
+    (2) edge node [right] {s = 0;} (3)
+    (3) edge node [right] {;} (4)
+    (4) edge node [right] {$T_{i*i}$ = i*i;} (12)
+    (12) edge node [left] {Neg($T_{i*i}$)} (5)
+    (12) edge node [right] {Pos($T_{i*i}$)} (6)
+    (6) edge node [right] {;} (7)
+    (7) edge node [right] {s = s+$T_{i*i}$;} (8)
+    (8) edge node [right] {;} (9)
+    (9) edge node [right] {;} (10)
+    (10) edge [bend left] node {i = i-1;} (4)
+    (5) edge node [left] {M[0] = s;} (11);
+\end{tikzpicture}
+\end{minipage}
+
+
+\subsection*{5.}
+\begin{align*}
+Unoptimized = 3+100*(2+2+2+2+2+2)+2+1 &= 1206\\
+Optimized   = 2+100*(2+0+2+0+0+2)+2+1 &= 605
+\end{align*}
+
+
+\section*{Exercise 2: Constant propagation}
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{1. Draw CFG}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below left of=3](4) {3};
+  \node[main node] [below right of=3](5) {4};
+  \node[main node] [below right of=4] (6) {5};
+  \node[main node] [below of=6] (7) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {y = 10;} (2)
+    (2) edge node [right] {x = 200;} (3)
+    (3) edge node [left] {Neg(x<y)} (4)
+    (3) edge node [right] {Pos(x<y)} (5)
+    (5) edge node [right] {y = 2*x} (6)
+    (4) edge node [left] {y = x/2} (6)
+    (6) edge node [right] {M[0] = y;} (7);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{2. Constraints for const. prop.}
+\begin{align*}
+&\mathcal{D}[0] \sqsubseteq \{x \mapsto \intercal, y \mapsto \intercal\}\\
+&\mathcal{D}[1] \sqsubseteq \mathcal{D}[0] \oplus \{y \mapsto 10\}\\
+&\mathcal{D}[2] \sqsubseteq \mathcal{D}[1] \oplus \{x \mapsto 200\}\\
+&\mathcal{D}[3] \sqsubseteq \mathcal{D}[2]\\
+&\mathcal{D}[4] \sqsubseteq \mathcal{D}[2] \oplus \{x \mapsto \perp, y \mapsto \perp\}\\
+&\mathcal{D}[5] \sqsubseteq \mathcal{D}[3] \oplus \{y \mapsto 100\}\\
+&\mathcal{D}[5] \sqsubseteq \mathcal{D}[4] \oplus \{y \mapsto 400\}\\
+&\mathcal{D}[f] \sqsubseteq \mathcal{D}[5]\\
+\end{align*}
+\end{minipage}
+
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{3. Solution on CFG}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={fill=blue!20,draw,font=\sffamily\bfseries}]
+
+  \node[main node] (1) {0, $x \mapsto \intercal, y \mapsto \intercal$};
+  \node[main node] [below of=1] (2) {1, $x \mapsto \intercal, y \mapsto 10$};
+  \node[main node] [below of=2] (3) {2, $x \mapsto 200, y \mapsto 10$};
+  \node[main node] [below left of=3](4) {3, $x \mapsto 200, y \mapsto 10$};
+  \node[main node] [below right of=3](5) {4};
+  \node[main node] [below right of=4] (6) {5, $x \mapsto 200, y \mapsto 100$};
+  \node[main node] [below of=6] (7) {f, $x \mapsto 200, y \mapsto 100$};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {y = 10;} (2)
+    (2) edge node [right] {x = 200;} (3)
+    (3) edge node [left] {Neg(x<y)} (4)
+    (3) edge node [right] {Pos(x<y)} (5)
+    (5) edge node [right] {y = 2*x} (6)
+    (4) edge node [left] {y = x/2} (6)
+    (6) edge node [right] {M[0] = y;} (7);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\subsection*{4. Remove edges}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below left of=3](4) {3};
+  \node[main node] [below right of=3](5) {4};
+  \node[main node] [below right of=4] (6) {5};
+  \node[main node] [below of=6] (7) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {;} (2)
+    (2) edge node [right] {x = 200;} (3)
+    (3) edge node [left] {;} (4)
+    (3) edge node [right] {;} (5)
+    (5) edge node [right] {;} (6)
+    (4) edge node [left] {y = x/2} (6)
+    (6) edge node [right] {M[0] = y;} (7);
+\end{tikzpicture}
+\end{minipage}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
