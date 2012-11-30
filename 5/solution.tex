@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+%\usepackage[ngerman]{babel}
+\usepackage[ngerman,english]{babel}
+\selectlanguage{english}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 5}
+
+\maketitle
+
+\section*{Exercise 1: More constant propagation}
+\begin{minipage}[t]{0.5\textwidth}
+\vspace{0pt}
+\subsection*{1. Draw CFG}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3};
+  \node[main node] [below left of=4](5) {4};
+  \node[main node] [below right of=4](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=5] (9) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {x = 0;} (2)
+    (2) edge node [right] {y = 1;} (3)
+    (3) edge node [right] {z = 1;} (4)
+    (4) edge node [left] {Neg(z <= y)} (5)
+    (4) edge node [right] {Pos(z <= y)} (6)
+    (6) edge node [right] {y = x*z + y;} (7)
+    (7) edge node [right] {x = y - 1;} (8)
+    (8) edge [bend left] node {z = z*2;} (4)
+    (5) edge node [left] {r = y;} (9);
+\end{tikzpicture}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\vspace{0pt}
+\subsection*{2. Contraints}
+\begin{align*}
+&\mathcal{D}[0] \sqsubseteq \{x \mapsto \intercal, y \mapsto \intercal\}\\
+&\mathcal{D}[1] \sqsubseteq \mathcal{D}[0] \oplus \{y \mapsto 10\}\\
+&\mathcal{D}[2] \sqsubseteq \mathcal{D}[1] \oplus \{x \mapsto 200\}\\
+&\mathcal{D}[3] \sqsubseteq \mathcal{D}[2]\\
+&\mathcal{D}[4] \sqsubseteq \mathcal{D}[2] \oplus \{x \mapsto \perp, y \mapsto \perp\}\\
+&\mathcal{D}[5] \sqsubseteq \mathcal{D}[3] \oplus \{y \mapsto 100\}\\
+&\mathcal{D}[5] \sqsubseteq \mathcal{D}[4] \oplus \{y \mapsto 400\}\\
+&\mathcal{D}[f] \sqsubseteq \mathcal{D}[5]\\
+\end{align*}
+\end{minipage}
+\subsection*{3. Simplified solution}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (1) {0};
+  \node[main node] [below of=1] (2) {1};
+  \node[main node] [below of=2] (3) {2};
+  \node[main node] [below of=3] (4) {3};
+  \node[main node] [below left of=4](5) {4};
+  \node[main node] [below right of=4](6) {5};
+  \node[main node] [below of=6] (7) {6};
+  \node[main node] [below of=7] (8) {7};
+  \node[main node] [below of=5] (9) {f};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (1) edge node [right] {x = 0;} (2)
+    (2) edge node [right] {y = 1;} (3)
+    (3) edge node [right] {z = 1;} (4)
+    (4) edge node [left] {Neg(z <= y)} (5)
+    (4) edge node [right] {Pos(z <= y)} (6)
+    (6) edge node [right] {y = x*z + y;} (7)
+    (7) edge node [right] {x = y - 1;} (8)
+    (8) edge [bend left] node {z = z*2;} (4)
+    (5) edge node [left] {r = y;} (9);
+\end{tikzpicture}
+
+
+\section*{Exercise 2: Description relation}
+Abstract:
+\begin{align*}
+(\{x \mapsto [2,2], y \mapsto [4,4]\}, \{200 \mapsto [4,4]\})
+\end{align*}
+Concrete:
+\begin{align*}
+(\{x \mapsto 2, y \mapsto 4\})\\
+(\{x \mapsto 2, y \mapsto 5\})\\
+(\{x \mapsto 3, y \mapsto 4\})\\
+(\{x \mapsto 3, y \mapsto 5\})\\
+\end{align*}
+
+
+\section*{Exercise 3: Intervals}
+\subsection*{a)}
+$[0,0] * ([2,3] < [1,5]) = [0,0] * [0,1] = [0,0]$
+
+\subsection*{b)}
+$(-[2,3]) * (-[2,3]) = [2,3] * [2,3] = [2*2, 3*3] = [4,9]$
+
+\subsection*{c)}
+$[1,5] == ([1,5] + [0,0]) = [1,5] == [1,5] = [1,1]$
+
+\subsection*{d)}
+
+
+\section*{Exercise 4: Optimizing abstract operations}
+\subsection*{a)}
+
+\subsection*{b)}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
