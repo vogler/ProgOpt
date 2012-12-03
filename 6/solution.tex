@@ -1,0 +1,129 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+%\usepackage[ngerman]{babel}
+\usepackage[ngerman,english]{babel}
+\selectlanguage{english}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
+\begin{document}
+
+\author{Ralf Vogler}
+\title{Program Optimization}
+\subtitle{Exercise sheet 6}
+
+\maketitle
+
+\section*{Exercise 1: More interval analysis}
+\subsection*{1. Accelerated widening and narrowing}
+Widening with point 4 as a loop separator:\\
+\begin{tabular}{|c||cc|cc||cc|cc||cc|cc||}
+\hline
+ & \multicolumn{4}{|c|}{1} & \multicolumn{4}{|c|}{2} & \multicolumn{4}{|c|}{3} \\
+\hline
+\hline
+ & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} \\
+ & l & u & l & u & l & u & l & u & l & u & l & u \\
+\hline
+1 & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$     & $+\infty$ & $-\infty$  & $+\infty$ \\
+2 & 20		  & 20		  & $-\infty$ & $+\infty$ & 19		  & 20		  &	40	      & 40		  &	$-\infty$	  & 20		  &	$-\infty$  & 40 \\
+3 & 20		  & 20		  & $-\infty$ & $+\infty$ & 19		  & 20		  &	40  	  & 40		  &	1	          & 20		  &	$-\infty$  & 40 \\
+4 & 20		  & 20		  & 40		  & 40		  & $-\infty$ & 20		  &	$-\infty$ & 40		  &	$-\infty$	  & 20		  &	$-\infty$  & 40 \\
+5 & 20		  & 20		  & 40		  & 40		  & $-\infty$ & 20		  &	0	      & 40		  &	$-\infty$	  & 20		  &	0	       & 40 \\
+6 & 20		  & 20		  & 40		  & 40		  & $-\infty$ & 20		  &	$-\infty$ & 40		  &	$-\infty$	  & 20		  &	$-\infty$  & 40 \\
+7 & $\bot$	  & $\bot$	  & $\bot$	  & $\bot$	  & $\bot$	  & $\bot$    &	$\bot$    & $\bot$    &	$-\infty$	  & 0		  &	$-\infty$      & 40 \\
+\hline
+\end{tabular}\\
+\\
+Accelerated narrowing:\\
+\begin{tabular}{|c||cc|cc||cc|cc||cc|cc||}
+\hline
+ & \multicolumn{4}{|c|}{0} & \multicolumn{4}{|c|}{1} & \multicolumn{4}{|c|}{2} \\
+\hline
+\hline
+ & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} & \multicolumn{2}{|c|}{i} & \multicolumn{2}{|c|}{x} \\
+ & l & u & l & u & l & u & l & u & l & u & l & u \\
+\hline
+1 & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ & $-\infty$ & $+\infty$ \\
+2 & $-\infty$ & 20		  & $-\infty$ & 40		  & $-\infty$ & 20		  &	$-\infty$ & 40		  &	0	      & 20		  &	2	      & 40 \\
+3 & $-\infty$ & 20		  & $-\infty$ & 40		  & 1		  & 20		  &	$-\infty$ & 40		  &	1	      & 20		  &	2	      & 40 \\
+4 & $-\infty$ & 20		  & $-\infty$ & 40		  & 1		  & 20		  &	2   	  & 40		  &	1	      & 20		  &	2	      & 40 \\
+5 & $-\infty$ & 20		  & $-\infty$ & 40		  & 1		  & 20		  &	2   	  & 40		  &	1   	  & 20		  &	2	      & 40 \\
+6 & $-\infty$ & 20		  & $-\infty$ & 40		  & 1		  & 20		  &	2   	  & 40		  &	1   	  & 20		  &	2	      & 40 \\
+7 & $-\infty$ & 0		  & $-\infty$ & 40		  & $-\infty$ & 0		  &	$-\infty$ & 40		  &	0   	  & 0		  &	2	      & 40 \\
+\hline
+\end{tabular}
+
+\subsection*{2. Bounds check}
+The bounds check $x \in [0, 40]$ can be removed because at point 4 $x=i*2$ and $i \in [1, 20]$, i.e. $x \in [2,40]$ (cf. result of narrowing in last iteration).
+
+
+\section*{Exercise 2: Points-to analysis}
+\subsection*{1. Contraint system}
+\begin{align*}
+\mathcal{P}[1] &\sqsupseteq (\emptyset, \emptyset)\\
+\mathcal{P}[2] &\sqsupseteq (\mathcal{P}[1]_1 \oplus \{a \mapsto \{(1,2)\}\}, \mathcal{P}[1]_2)\\
+\mathcal{P}[3] &\sqsupseteq (\mathcal{P}[2]_1 \oplus \{xs \mapsto \{(2,3)\}\}, \mathcal{P}[2]_2)\\
+\mathcal{P}[4] &\sqsupseteq (\mathcal{P}[3]_1 \oplus \{ys \mapsto \{(3,4)\}\}, \mathcal{P}[3]_2)\\
+\mathcal{P}[5] &\sqsupseteq (\mathcal{P}[4]_1 \oplus \{i \mapsto \emptyset\}, \mathcal{P}[4]_2)\\
+\mathcal{P}[5] &\sqsupseteq (\mathcal{P}[10]_1 \oplus \{i \mapsto \emptyset\}, \mathcal{P}[10]_2)\\
+\mathcal{P}[6] &\sqsupseteq (\mathcal{P}[5]_1, \mathcal{P}[5]_2)\\
+\mathcal{P}[11] &\sqsupseteq (\mathcal{P}[5]_1, \mathcal{P}[5]_2)\\
+\mathcal{P}[7] &\sqsupseteq (\mathcal{P}[6]_1 \oplus \{t \mapsto \bigcup \{\mathcal{P}[6]_2(f)\;|\;f \in \mathcal{P}[6]_1\;a\}\}, \mathcal{P}[6]_2)\\
+\mathcal{P}[8] &\sqsupseteq (\mathcal{P}[7]_1, \mathcal{P}[7]_2 \oplus \{f \mapsto (\mathcal{P}[7]_2\;f \cup \mathcal{P}[7]_1\;t)\;|\;f \in \mathcal{P}[7]_1\;xs\})\\
+\mathcal{P}[9] &\sqsupseteq (\mathcal{P}[8]_1 \oplus \{t \mapsto \bigcup \{\mathcal{P}[8]_2(f)\;|\;f \in \mathcal{P}[8]_1\;a\}\}, \mathcal{P}[8]_2)\\
+\mathcal{P}[10] &\sqsupseteq (\mathcal{P}[9]_1, \mathcal{P}[9]_2 \oplus \{f \mapsto (\mathcal{P}[9]_2\;f \cup \mathcal{P}[9]_1\;t)\;|\;f \in \mathcal{P}[9]_1\;ys\})\\
+\end{align*}
+
+\subsection*{2. Second load from a[i] superfluous}
+The second load is superfluous because in point 7, t itself is not changed and the assignment to xs[i] can't change neither t nor a[i], so that t and a[i] will still be the same after point 7.
+
+
+\section*{Exercise 3: Flow insensitive alias analysis}
+\subsection*{1. Contraint system}
+\begin{align*}
+\mathcal{P}[a] &\supseteq \{(1,2)\}\\
+\mathcal{P}[xs] &\supseteq \{(2,3)\}\\
+\mathcal{P}[ys] &\supseteq \{(3,4)\}\\
+\mathcal{P}[t] &\supseteq \bigcup \{\mathcal{P}[f]\;|\;f \in \mathcal{P}[a]\}\\
+\mathcal{P}[f] &\supseteq (f \in \mathcal{P}[xs])\;?\;\mathcal{P}[t] : \emptyset\\
+\mathcal{P}[f] &\supseteq (f \in \mathcal{P}[ys])\;?\;\mathcal{P}[t] : \emptyset\\
+&\text{for all $f \in Addr^\sharp$}
+\end{align*}
+
+\subsection*{2. Second load from a[i] superfluous}
+Since the second load from a[i] doesn't add any new constraint and no block is modified, it is superfluous.
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
